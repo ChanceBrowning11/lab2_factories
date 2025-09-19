@@ -1,1 +1,17 @@
-[]
+{
+  "emails": [
+    {
+      "subject": "homework",
+      "body": "I have a question on the assignment that is due this week.",
+      "ground_truth_topic": "school",
+      "features": {
+        "spam_has_spam_words": 0,
+        "word_length_average_word_length": 4.230769230769231,
+        "email_embeddings_average_embedding": 33.0,
+        "raw_email_email_subject": "homework",
+        "raw_email_email_body": "I have a question on the assignment that is due this week."
+      },
+      "id": 1
+    }
+  ]
+}

@@ -16,6 +16,22 @@ class EmailClassifierModel:
         with open(data_file, 'r') as f:
             return json.load(f)
     
+    def _save_topic_data(self, data: Dict[str, Any]) -> None:
+        """Save topic data atomically to avoid corruption"""
+        try:
+            data_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'topic_keywords.json')
+            with open(data_file, 'r+') as file:
+                file_data = json.load(file)
+                file_data.update(data)
+                file.seek(0) # 3. Move the file pointer back to the beginning
+                json.dump(file_data, file, indent=2)
+                file.truncate()
+        except FileNotFoundError:
+            print(f"Error: The file '{data_file}' was not found.")
+        
+        except json.JSONDecodeError:
+            print(f"Error: The file '{data_file}' is not a valid JSON file.")
+    
     def predict(self, features: Dict[str, Any]) -> str:
         """Classify email into one of the topics using feature similarity"""
         scores = {}
@@ -26,6 +42,20 @@ class EmailClassifierModel:
             scores[topic] = score
         
         return max(scores, key=scores.get)
+    
+    def add_topic(self, name: str, description: str) -> Dict[str, Any]:
+        """Add a new topic to the JSON file and refresh memory"""
+        if name in self.topic_data:
+            raise ValueError(f"Topic '{name}' already exists")
+
+        # Add new topic
+        self.topic_data[name] = {"description": description}
+        self._save_topic_data(self.topic_data)
+
+        # Refresh in-memory lists
+        self.topics = list(self.topic_data.keys())
+
+        return {"available_topics": self.topics}
     
     def get_topic_scores(self, features: Dict[str, Any]) -> Dict[str, float]:
         """Get classification scores for all topics"""
