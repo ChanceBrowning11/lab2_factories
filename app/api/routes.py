@@ -20,7 +20,7 @@ class EmailWithTopicRequest(BaseModel):
 class EmailStoreRequest(BaseModel):
     subject: str
     body: str
-    ground_truth_topic: Optional[str] = None  # optional
+    ground_truth_topic: Optional[str] = None
 
 class EmailClassificationResponse(BaseModel):
     predicted_topic: str
@@ -36,7 +36,6 @@ class TopicCreateRequest(BaseModel):
     description: str
 
 class TopicCreateResponse(BaseModel):
-    message: str
     available_topics: List[str]
 
 @router.post("/emails/classify", response_model=EmailClassificationResponse)
@@ -84,6 +83,7 @@ async def add_topics(request: TopicCreateRequest):
     try:
         inference_service = EmailTopicInferenceService()
         result = inference_service.add_topic(request.name, request.description)
+        print(result)
         return TopicCreateResponse(
             available_topics=result["available_topics"]
         )
@@ -94,29 +94,3 @@ async def add_topics(request: TopicCreateRequest):
 async def pipeline_info():
     inference_service = EmailTopicInferenceService()
     return inference_service.get_pipeline_info()
-
-# TODO: LAB ASSIGNMENT - Part 2 of 2  
-# Create a GET endpoint at "/features" that returns information about all feature generators
-# available in the system.
-#
-# Requirements:
-# 1. Create a GET endpoint at "/features"
-# 2. Import FeatureGeneratorFactory from app.features.factory
-# 3. Use FeatureGeneratorFactory.get_available_generators() to get generator info
-# 4. Return a JSON response with the available generators and their feature names
-# 5. Handle any exceptions with appropriate HTTP error responses
-#
-# Expected response format:
-# {
-#   "available_generators": [
-#     {
-#       "name": "spam",
-#       "features": ["has_spam_words"]
-#     },
-#     ...
-#   ]
-# }
-#
-# Hint: Look at the existing endpoints above for patterns on error handling
-# Hint: You may need to instantiate generators to get their feature names
-

@@ -25,21 +25,18 @@ class EmailTopicInferenceService:
     def classify_email(self, email: Email, use_store: bool) -> Dict[str, Any]:
         """Classify an email into topics using generated features"""
         
-        # Step 1: Generate features from email
         features = self.feature_factory.generate_all_features(email)
         
-        # Step 2: Classify using features
         model_pred = self.model.predict(features)
         topic_scores = self.model.get_topic_scores(features)
         
         predicted_topic: str
         if use_store == True:
-            store_topic = self._predict_by_nearest_labeled_email(features)
+            store_topic = self._predict_from_store(features)
             predicted_topic = store_topic or model_pred  # fallback if none found
         else:
             predicted_topic = model_pred
-        
-        # Return comprehensive results
+
         return {
             "predicted_topic": predicted_topic,
             "topic_scores": topic_scores,
@@ -49,8 +46,8 @@ class EmailTopicInferenceService:
         }
     
     def store_email(self, email: Email, ground_truth_topic: Optional[str] = None) -> int:
-        """Store an email with a potential ground truth topic (simple append/overwrite style)."""
-        # Validate GT if provided (case-insensitive → canonical)
+        """Store an email with a potential ground truth topic."""
+        # Validate GT if provided
         gt = None
         if ground_truth_topic:
             mapping = {t.lower(): t for t in self.model.topics}
@@ -62,15 +59,13 @@ class EmailTopicInferenceService:
                 )
             gt = mapping[key]
     
-        # Compute features now (optional but useful)
         features = self.feature_factory.generate_all_features(email)
     
-        # Build record WITHOUT id. _save_email will assign it.
         record = {
             "subject": email.subject,
             "body": email.body,
-            "ground_truth_topic": gt,   # None if not provided
-            "features": features,       # consider storing a subset if large
+            "ground_truth_topic": gt,
+            "features": features,
         }
     
         return self._save_email(record)
@@ -82,7 +77,7 @@ class EmailTopicInferenceService:
             "topics_with_descriptions": self.model.get_all_topics_with_descriptions()
         }
 
-    def _predict_by_nearest_labeled_email(self, features: Dict[str, Any]) -> Optional[str]:
+    def _predict_from_store(self, features: Dict[str, Any]) -> Optional[str]:
         """
         Return ground_truth_topic of the most similar stored email.
         Based on distance between feature's 'email_embeddings_average_embedding'.
@@ -90,7 +85,7 @@ class EmailTopicInferenceService:
         # Pull candidate numeric embedding for current email
         feat_val = features.get("email_embeddings_average_embedding", None)
         if feat_val is None:
-            return None  # no comparable feature → cannot do nearest
+            return None  # no comparable feature
 
         data = self._read_emails()
         emails: List[Dict[str, Any]] = data.get("emails", [])

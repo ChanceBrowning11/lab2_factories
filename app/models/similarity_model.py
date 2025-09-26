@@ -23,7 +23,7 @@ class EmailClassifierModel:
             with open(data_file, 'r+') as file:
                 file_data = json.load(file)
                 file_data.update(data)
-                file.seek(0) # 3. Move the file pointer back to the beginning
+                file.seek(0)
                 json.dump(file_data, file, indent=2)
                 file.truncate()
         except FileNotFoundError:
@@ -43,8 +43,9 @@ class EmailClassifierModel:
         
         return max(scores, key=scores.get)
     
-    def add_topic(self, name: str, description: str) -> Dict[str, Any]:
+    def add_topic(self, topic_name: str, description: str) -> Dict[str, Any]:
         """Add a new topic to the JSON file and refresh memory"""
+        name = topic_name.lower()
         if name in self.topic_data:
             raise ValueError(f"Topic '{name}' already exists")
 
@@ -72,7 +73,7 @@ class EmailClassifierModel:
         # Get email embedding from features
         email_embedding = features.get("email_embeddings_average_embedding", 0.0)
         
-        # Get topic description and create embedding (description length as embedding)
+        # Get topic description and create embedding
         topic_description = self.topic_data[topic]['description']
         topic_embedding = float(len(topic_description))
         
@@ -80,9 +81,8 @@ class EmailClassifierModel:
         # Smaller distance = higher similarity
         distance = abs(email_embedding - topic_embedding)
         
-        # Normalize to 0-1 range using exponential decay
-        # e^(-distance/scale) gives values between 0 and 1
-        scale = 50.0  # Adjust this to control how quickly similarity drops with distance
+        # e^(-distance/scale) gives values between 0 and 1 - normalized range
+        scale = 50.0
         similarity = math.exp(-distance / scale)
         
         return similarity
