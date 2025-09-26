@@ -12,6 +12,19 @@
         "raw_email_email_body": "I have a question on the assignment that is due this week."
       },
       "id": 1
+    },
+    {
+      "subject": "Updates for Sept!",
+      "body": "Big things are coming! We are expanding the work space and hiring for several teams!",
+      "ground_truth_topic": "newsletter",
+      "features": {
+        "spam_has_spam_words": 0,
+        "word_length_average_word_length": 4.722222222222222,
+        "email_embeddings_average_embedding": 50.5,
+        "raw_email_email_subject": "Updates for Sept!",
+        "raw_email_email_body": "Big things are coming! We are expanding the work space and hiring for several teams!"
+      },
+      "id": 2
     }
   ]
 }

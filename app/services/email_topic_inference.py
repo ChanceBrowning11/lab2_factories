@@ -22,15 +22,22 @@ class EmailTopicInferenceService:
         return self.model.add_topic(topic_name, description)
 
     
-    def classify_email(self, email: Email) -> Dict[str, Any]:
+    def classify_email(self, email: Email, use_store: bool) -> Dict[str, Any]:
         """Classify an email into topics using generated features"""
         
         # Step 1: Generate features from email
         features = self.feature_factory.generate_all_features(email)
         
         # Step 2: Classify using features
-        predicted_topic = self.model.predict(features)
+        model_pred = self.model.predict(features)
         topic_scores = self.model.get_topic_scores(features)
+        
+        predicted_topic: str
+        if use_store == True:
+            store_topic = self._predict_by_nearest_labeled_email(features)
+            predicted_topic = store_topic or model_pred  # fallback if none found
+        else:
+            predicted_topic = model_pred
         
         # Return comprehensive results
         return {
@@ -74,10 +81,48 @@ class EmailTopicInferenceService:
             "available_topics": self.model.topics,
             "topics_with_descriptions": self.model.get_all_topics_with_descriptions()
         }
+
+    def _predict_by_nearest_labeled_email(self, features: Dict[str, Any]) -> Optional[str]:
+        """
+        Return ground_truth_topic of the most similar stored email.
+        Based on distance between feature's 'email_embeddings_average_embedding'.
+        """
+        # Pull candidate numeric embedding for current email
+        feat_val = features.get("email_embeddings_average_embedding", None)
+        if feat_val is None:
+            return None  # no comparable feature → cannot do nearest
+
+        data = self._read_emails()
+        emails: List[Dict[str, Any]] = data.get("emails", [])
+
+        best_topic: Optional[str] = None
+        best_dist: float = float("inf")
+
+        for email in emails:
+            gt = email.get("ground_truth_topic")
+            if not gt:
+                continue  # only use labeled emails
+
+            rec_feats = email.get("features") or {}
+            rec_val = rec_feats.get("email_embeddings_average_embedding", None)
+            if rec_val is None:
+                continue  # skip if stored record has no comparable feature
+
+            dist = abs(float(feat_val) - float(rec_val))
+            if dist < best_dist:
+                best_dist = dist
+                best_topic = gt
+
+        return best_topic        
+
+    def _read_emails(self) -> Dict[str, Any]:
+        if not os.path.exists(self._emails_file):
+            return {"emails": []}
+        with open(self._emails_file, "r", encoding="utf-8") as f:
+            return json.load(f)
     
     def _save_email(self, record: Dict[str, Any]) -> int:
         """Append an email record to emails.json."""
-        data_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))),'data', 'emails.json')
         if not os.path.exists(self._emails_file):
             data = {"emails": []}
         else:
